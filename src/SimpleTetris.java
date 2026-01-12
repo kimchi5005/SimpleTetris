@@ -4,6 +4,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.Random;
 
 public class SimpleTetris extends JFrame {
 
@@ -40,6 +41,30 @@ class GamePanel extends JPanel implements ActionListener {
     private int currentX = 4; // 開始位置(横)
     private int currentY = 0; // 開始位置(縦)
 
+    // 7種類のミノの形状データ (3次元配列)
+    private final int[][][] MINOS = {
+            {{1, 1, 1, 1}},           // I型 (1番)
+            {{2, 2}, {2, 2}},         // O型 (2番)
+            {{0, 3, 0}, {3, 3, 3}},   // T型 (3番)
+            {{4, 4, 0}, {0, 4, 4}},   // S型 (4番)
+            {{0, 5, 5}, {5, 5, 0}},   // Z型 (5番)
+            {{6, 0, 0}, {6, 6, 6}},   // J型 (6番)
+            {{0, 0, 7}, {7, 7, 7}}    // L型 (7番)
+    };
+
+    private Color getColor(int type) {
+        switch (type) {
+            case 1: return Color.CYAN;   // I
+            case 2: return Color.YELLOW; // O
+            case 3: return new Color(128, 0, 128); // T (紫)
+            case 4: return Color.RED;  // S
+            case 5: return Color.GREEN;    // Z
+            case 6: return Color.BLUE;   // J
+            case 7: return Color.ORANGE; // L
+            default: return Color.BLACK;
+        }
+    }
+
     // 確認用にL字ブロックに変更
     private int[][] minoShape = {
             {1, 0},
@@ -72,6 +97,8 @@ class GamePanel extends JPanel implements ActionListener {
         // ゲームループ開始 (500ミリ秒ごとにactionPerformedを呼ぶ)
         timer = new Timer(500, this);
         timer.start();
+        spawnMino(); // 最初のミノを生成
+        timer.start();
     }
 
     // --- ゲームのメインループ (心臓部) ---
@@ -94,13 +121,24 @@ class GamePanel extends JPanel implements ActionListener {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // 1. 固定されたブロック（背景）を描画
-        g.setColor(Color.GRAY);
+        // 1. 固定されたブロックを描画
         for (int y = 0; y < ROWS; y++) {
             for (int x = 0; x < COLS; x++) {
-                if (board[y][x] == 1) {
-                    g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    g.drawRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE); // 枠線
+                if (board[y][x] > 0) {
+                    g.setColor(getColor(board[y][x])); // 数字に合わせた色を取得
+                    g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE - 1, TILE_SIZE - 1);
+                }
+            }
+        }
+
+        // 2. 現在落ちているブロックを描画
+        for (int y = 0; y < minoShape.length; y++) {
+            for (int x = 0; x < minoShape[0].length; x++) {
+                if (minoShape[y][x] > 0) {
+                    g.setColor(getColor(minoShape[y][x])); // 数字に合わせた色を取得
+                    int drawX = (currentX + x) * TILE_SIZE;
+                    int drawY = (currentY + y) * TILE_SIZE;
+                    g.fillRect(drawX, drawY, TILE_SIZE - 1, TILE_SIZE - 1);
                 }
             }
         }
@@ -168,22 +206,22 @@ class GamePanel extends JPanel implements ActionListener {
     private boolean canMove(int newX, int newY) {
         for (int y = 0; y < minoShape.length; y++) {
             for (int x = 0; x < minoShape[0].length; x++) {
-                if (minoShape[y][x] == 1) {
+                if (minoShape[y][x] > 0) { // 0より大きい（ミノがある）場所をチェック
                     int targetX = newX + x;
                     int targetY = newY + y;
 
-                    // 1. 壁の外に出ていないか？
+                    // 画面の左右、および「下」の境界線チェック
                     if (targetX < 0 || targetX >= COLS || targetY >= ROWS) {
-                        return false;
+                        return false; // 画面外なら移動不可
                     }
-                    // 2. すでにブロックがある場所ではないか？
-                    if (targetY >= 0 && board[targetY][targetX] == 1) {
-                        return false;
+                    // すでに固定されたブロックとの衝突チェック
+                    if (targetY >= 0 && board[targetY][targetX] > 0) {
+                        return false; // ブロックがあれば移動不可
                     }
                 }
             }
         }
-        return true;
+        return true; // どこにもぶつからなければ移動OK
     }
 
     // 移動処理
@@ -198,8 +236,8 @@ class GamePanel extends JPanel implements ActionListener {
     private void fixMino() {
         for (int y = 0; y < minoShape.length; y++) {
             for (int x = 0; x < minoShape[0].length; x++) {
-                if (minoShape[y][x] == 1) {
-                    board[currentY + y][currentX + x] = 1;
+                if (minoShape[y][x] > 0) {
+                    board[currentY + y][currentX + x] = minoShape[y][x]; // 1じゃなく数字を保存
                 }
             }
         }
@@ -227,10 +265,23 @@ class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    // 新しいブロックを上に出現させる
     private void spawnMino() {
+        Random rand = new Random();
+        // 7種類の中からランダムに1つ選ぶ
+        int index = rand.nextInt(MINOS.length);
+        minoShape = MINOS[index];
+
+        // 出現位置を中央上にリセット
         currentX = 4;
         currentY = 0;
-        // 本来はここでゲームオーバー判定を行う
-    }
-}
+
+        // もし出現した瞬間に動けなければゲームオーバー
+        if (!canMove(currentX, currentY)) {
+            timer.stop();
+            JOptionPane.showMessageDialog(this, "Game Over!");
+            // 盤面をリセット
+            board = new int[ROWS][COLS];
+            spawnMino();
+            timer.start();
+        }
+    }}

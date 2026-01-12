@@ -40,9 +40,10 @@ class GamePanel extends JPanel implements ActionListener {
     private int currentX = 4; // 開始位置(横)
     private int currentY = 0; // 開始位置(縦)
 
-    // テスト用の四角いブロック形状
-    private final int[][] minoShape = {
-            {1, 1},
+    // 確認用にL字ブロックに変更
+    private int[][] minoShape = {
+            {1, 0},
+            {1, 0},
             {1, 1}
     };
 
@@ -56,11 +57,15 @@ class GamePanel extends JPanel implements ActionListener {
             @Override
             public void keyPressed(KeyEvent e) {
                 switch (e.getKeyCode()) {
-                    case KeyEvent.VK_LEFT:  moveMino(-1, 0); break; // 左へ
-                    case KeyEvent.VK_RIGHT: moveMino(1, 0);  break; // 右へ
-                    case KeyEvent.VK_DOWN:  moveMino(0, 1);  break; // 下へ加速
+                    case KeyEvent.VK_LEFT:  moveMino(-1, 0); break;
+                    case KeyEvent.VK_RIGHT: moveMino(1, 0);  break;
+                    case KeyEvent.VK_DOWN:  moveMino(0, 1);  break;
+                    // --- ここから追加 ---
+                    case KeyEvent.VK_Z:     rotateMinoLeft();  break; // Zで左回転
+                    case KeyEvent.VK_X:     rotateMinoRight(); break; // Xで右回転
+                    // --- ここまで ---
                 }
-                repaint(); // 画面を再描画
+                repaint();
             }
         });
 
@@ -115,6 +120,50 @@ class GamePanel extends JPanel implements ActionListener {
 
     // --- ヘルパーメソッド（判定や処理） ---
 
+    // --- 回転用メソッド ---
+
+    // 右回転 (時計回り)
+    private void rotateMinoRight() {
+        int[][] newShape = rotate(true);
+        applyRotation(newShape);
+    }
+
+    // 左回転 (反時計回り)
+    private void rotateMinoLeft() {
+        int[][] newShape = rotate(false);
+        applyRotation(newShape);
+    }
+
+    // 行列の入れ替え計算（回転の実体）
+    private int[][] rotate(boolean clockwise) {
+        int rows = minoShape.length;
+        int cols = minoShape[0].length;
+        int[][] newShape = new int[cols][rows]; // 行と列を入れ替えた新しい配列を作る
+
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < cols; x++) {
+                if (clockwise) {
+                    // 右回転の計算
+                    newShape[x][rows - 1 - y] = minoShape[y][x];
+                } else {
+                    // 左回転の計算
+                    newShape[cols - 1 - x][y] = minoShape[y][x];
+                }
+            }
+        }
+        return newShape;
+    }
+
+    // 回転できるか判定して、OKなら適用する
+    private void applyRotation(int[][] newShape) {
+        int[][] oldShape = minoShape; // 失敗した時のために今の形を保存
+        minoShape = newShape;         // いったん新しい形にする
+
+        if (!canMove(currentX, currentY)) {
+            // もし壁やブロックにめり込んだら、元に戻す
+            minoShape = oldShape;
+        }
+    }
     // 移動可能かチェックするメソッド
     private boolean canMove(int newX, int newY) {
         for (int y = 0; y < minoShape.length; y++) {

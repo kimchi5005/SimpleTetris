@@ -142,18 +142,6 @@ class GamePanel extends JPanel implements ActionListener {
                 }
             }
         }
-
-        // 2. 現在落ちているブロックを描画
-        g.setColor(Color.CYAN);
-        for (int y = 0; y < minoShape.length; y++) {
-            for (int x = 0; x < minoShape[0].length; x++) {
-                if (minoShape[y][x] == 1) {
-                    int drawX = (currentX + x) * TILE_SIZE;
-                    int drawY = (currentY + y) * TILE_SIZE;
-                    g.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
-                }
-            }
-        }
     }
 
     // --- ヘルパーメソッド（判定や処理） ---
@@ -284,4 +272,5 @@ class GamePanel extends JPanel implements ActionListener {
             spawnMino();
             timer.start();
         }
-    }}
+    }
+}
